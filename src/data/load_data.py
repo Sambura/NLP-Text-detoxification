@@ -20,6 +20,10 @@ def sort_by_toxicity_inplace(df):
     df.loc[mask, ['ref_tox', 'trn_tox']] = df.loc[mask, ['trn_tox', 'ref_tox']].values
 
 def flatten_data(df):
+    """
+        Flattens the detoxification dataset: reference and translation coluns are combined into
+        a `text` column, and ref_tox & trn_tox combined into `toxicity`. Flattens a copy of dataframe.
+    """
     renamed = df[['translation', 'trn_tox']].rename(columns={'translation': 'reference', 'trn_tox': 'ref_tox'})
     flat = pd.concat((df[['reference', 'ref_tox']], renamed), axis=0).rename(columns={'reference': 'text', 'ref_tox': 'toxicity'})
     flat.reset_index(drop=True, inplace=True)

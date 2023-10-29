@@ -22,6 +22,3 @@ def get_data(
 
     with zipfile.ZipFile(zip_destination, 'r') as zip_ref:
         zip_ref.extractall(data_destination)
-
-if __name__ == "__main__":
-    get_data()

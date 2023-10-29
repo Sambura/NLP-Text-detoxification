@@ -2,6 +2,7 @@
 /data
 # models will be uploaded somewhere else..
 /models
+/models backup
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
