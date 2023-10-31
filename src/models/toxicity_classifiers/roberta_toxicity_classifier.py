@@ -20,4 +20,4 @@ class RTCModel(ToxicityClassifier):
         else:
             raise RuntimeError('Unsupported input type')
         
-        return output[:,1] if to_toxic else output
+        return output[:,1] > output[:,0] if to_toxic else output

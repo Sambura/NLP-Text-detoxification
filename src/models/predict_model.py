@@ -16,11 +16,11 @@ except ImportError:
 
 
 class DetoxifierPredictor():
-    def __init__(self, path='models/trained_detoxifier'):
+    def __init__(self, path='models/trained_detoxifier', model=None, tokenizer=None):
         self.model_path = path
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_path) if tokenizer is None else tokenizer
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_path) if model is None else model
         self.model.eval()
         self.model.config.use_cache = False
         self.model.to(self.device)

@@ -2,6 +2,7 @@ from tqdm.auto import tqdm
 import torch
 import pandas as pd
 import numpy as np
+import gc
 
 from toxicity_classifiers.t5_toxicity_evaluator import T5TEModel
 from toxicity_classifiers.roberta_toxicity_classifier import RTCModel
@@ -38,6 +39,8 @@ def main(use_roberta=False, weights_path='models/last_toxic_regressor/model.pt',
     df = get_random_rows(df, data_portion)
     batch_size = 32 if use_roberta else 128
     ref_evals = evaluator.evaluate(df['Input'].astype(str).tolist(), batch_size)
+    gc.collect()
+    torch.cuda.empty_cache()
     trn_evals = evaluator.evaluate(df['Detoxified version'].astype(str).tolist(), batch_size)
 
     ttr = np.sum(ref_evals)
@@ -48,4 +51,4 @@ def main(use_roberta=False, weights_path='models/last_toxic_regressor/model.pt',
     print(f'{100 * (1 - ttt / ttr) : 0.2f}% samples detoxified succesfully')
 
 if __name__ == "__main__":
-   main(use_roberta=True, data_portion=1)
+   main(data_portion=1)
