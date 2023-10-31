@@ -39,9 +39,10 @@ class DetoxifierTrainer():
     def load_dataset(self, path='data/raw/filtered.tsv',
                     cache_path='data/interim/tokenized.tsv',
                     val_ratio=0.2,
-                    dataset_portion=1):
+                    dataset_portion=1,
+                    verbose=False):
         if self.tokenizer is None: self.load_pretrained()
-        dataset = load_detoxification_dataset(path, cache_path, self.tokenizer, dataset_portion)
+        dataset = load_detoxification_dataset(path, cache_path, self.tokenizer, dataset_portion, verbose)
         self.train_dataset, self.val_dataset = random_split(dataset, [1 - val_ratio, val_ratio])
 
     def get_default_generation_config(self):

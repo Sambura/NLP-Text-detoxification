@@ -14,7 +14,6 @@ except ImportError:
     from src.data.make_dataset import load_toxicity_dataset
 
 
-
 class DetoxifierPredictor():
     def __init__(self, path='models/trained_detoxifier', model=None, tokenizer=None):
         self.model_path = path
@@ -31,7 +30,7 @@ class DetoxifierPredictor():
         return genConfig
         
     def translate_text(self, inference_request):
-        tokenized = self.tokenizer.encode(inference_request, return_tensors="pt")
+        tokenized = self.tokenizer.encode(inference_request, return_tensors="pt").to(self.device)
         gen_config = self.get_generation_config(256)
         outputs = self.model.generate(tokenized, generation_config=gen_config)
         return self.tokenizer.decode(outputs[0], skip_special_tokens=True)

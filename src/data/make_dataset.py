@@ -16,13 +16,14 @@ def get_random_portion(dataset, portion):
     shuffle(dataset)
     return dataset[:int(np.clip(portion, 0, 1) * len(dataset))]
 
-def load_detoxification_dataset(path, cache_path, tokenizer, portion=1):
+def load_detoxification_dataset(path, cache_path, tokenizer, portion=1, verbose=False):
     """
         Detoxification dataset contains pairs of (reference, translation)
         to train a model to translate toxic text into neutral one. The format of the data is:
         { 'input_ids': ref_input_ids, 'labels': tranldation_input_ids }
     """
-    df = load_tokenized_data(path, cache_path, tokenizer)
+    df = load_tokenized_data(path, cache_path, tokenizer, verbose=verbose)
+    if verbose: print("Making a dataset...")
     dataset = make_detoxification_dataset(df)
     
     if portion == 1: return dataset
