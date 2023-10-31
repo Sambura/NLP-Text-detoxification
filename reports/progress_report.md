@@ -23,6 +23,11 @@ The initial plan was to train a transformer-based regressor that for evaluating 
 
 After that the toxicity threshold can be chosen in order to analyze, how many toxic sentences were successfully translated into a neutral ones.
 
+### Regressor architecture
+Initial regressor architecture was T5 encoder followed by 3-layerd fully-connected NN. The way the toxicity score is calculated is by passing hidden state returned by encoder for each token, and then sum up the results into a single number, activated by a sigmoid function to produce an output number from 0 to 1. 
+
+The final architecture is essentially the same, but instead of 3 layers, there is only 1 FC layer, since the amount of layers didn't seem to affect the model's perfomance.
+
 ### RoBERTa toxicity classifier
 
 Later I found out about existing toxicity classifier model made by the authors of the beforementioned paper. This is a RoBERTa based classifier, which, given a sentence, decides, whether it belongs to class `neutral` vs class `toxic`. This model could also be used to evalutae detoxification model's perfomance.

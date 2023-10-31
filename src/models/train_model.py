@@ -1,26 +1,15 @@
-import transformers
-import torch
-import random
-import numpy as np
 from torch.utils.data import random_split
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from transformers import GenerationConfig, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer
 
 try:
     from ..data.make_dataset import load_detoxification_dataset
+    from ..utils.training_utils import seed_everything
 except ImportError:
     import sys
-    sys.path.append('.')
+    if '.' not in sys.path: sys.path.append('.')
     from src.data.make_dataset import load_detoxification_dataset
-
-def seed_everything(seed):
-    if seed is None: return None
-    transformers.set_seed(seed)
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    return None
+    from src.utils.training_utils import seed_everything
 
 class DetoxifierTrainer():
     def __init__(self):
