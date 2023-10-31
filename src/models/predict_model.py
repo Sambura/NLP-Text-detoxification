@@ -3,6 +3,8 @@ from tqdm.auto import tqdm
 import torch
 import pandas as pd
 import numpy as np
+import os
+from pathlib import Path
 
 try:
     from ..data.make_dataset import load_toxicity_dataset
@@ -37,7 +39,7 @@ class DetoxifierPredictor():
     def collate_func(self, batch):
         return self.tokenizer.pad(batch, return_tensors='pt').to(self.device)
 
-    def get_eval_dataset(self, path='data/raw/filtered.tsv', cache_path='data/processed/tokenized.tsv', dataset_portion=1):
+    def get_eval_dataset(self, path='data/raw/filtered.tsv', cache_path='data/interim/tokenized.tsv', dataset_portion=1):
         return load_toxicity_dataset(path, cache_path, self.tokenizer, portion=dataset_portion)
 
     def get_dataloader(self, dataset, batch_size=128):
@@ -62,19 +64,24 @@ class DetoxifierPredictor():
 
         return texts
     
-    def make_ref_trn_dataframe(self, decoded_refs, decoded_trns):
-        return pd.DataFrame(np.array([decoded_refs, decoded_trns]).T, columns=['Input', 'Detoxified version'])
+    def export_ref_trn_dataframe(self, decoded_refs, decoded_trns, export_path='data/predicted/predictions.tsv'):
+        df = pd.DataFrame(np.array([decoded_refs, decoded_trns]).T, columns=['Input', 'Detoxified version'])
+        export_path_parent = Path(export_path).parent.absolute()
+        os.makedirs(export_path_parent, exist_ok=True)
+        df.to_csv(export_path, sep='\t', index=False)
     
-if __name__ == '__main__':
-    print('Loading model...')
-    predictor = DetoxifierPredictor('models backup/t5_detoxifier-10')
-    print('Loading data...')
-    dataset = predictor.get_eval_dataset(dataset_portion=0.001)
+def main(model_path='models/t5_detoxifier-10x10lr', dataset_portion=1, verbose=True):
+    if verbose: print('Loading model...')
+    predictor = DetoxifierPredictor(model_path)
+    if verbose: print('Loading data...')
+    dataset = predictor.get_eval_dataset(dataset_portion=dataset_portion)
     dataloader = predictor.get_dataloader(dataset)
     translations = predictor.predict(dataloader)
     decoded_translations = predictor.decode(translations)
     decoded_inputs = predictor.decode(dataset)
-    df = predictor.make_ref_trn_dataframe(decoded_inputs, decoded_translations)
+    if verbose: print('Exporting...')
+    predictor.export_ref_trn_dataframe(decoded_inputs, decoded_translations)
 
-    print(df.head(20))
+if __name__ == '__main__':
+    main()
     

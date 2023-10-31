@@ -1,29 +1,23 @@
 from transformers import RobertaTokenizer, RobertaForSequenceClassification
 from transformers.tokenization_utils_base import BatchEncoding
 import torch
+from .toxicity_classifier import ToxicityClassifier
 
-class RTCModel():
+class RTCModel(ToxicityClassifier):
     def __init__(self):
         self.model = RobertaForSequenceClassification.from_pretrained('SkolkovoInstitute/roberta_toxicity_classifier')
         self.tokenizer = RobertaTokenizer.from_pretrained('SkolkovoInstitute/roberta_toxicity_classifier')
-        self.device = torch.device('cpu')
 
-    def predict(self, input):
+    def predict(self, input, to_toxic=False, threshold=0.5):
         if isinstance(input, (BatchEncoding, dict)):
-            return self.model(input_ids=input['input_ids'], attention_mask=input['attention_mask']).logits
+            output = self.model(input_ids=input['input_ids'], attention_mask=input['attention_mask']).logits
         elif isinstance(input, list):
             tokenized = self.tokenizer.encode(input, padding=True, return_tensors='pt').to(self.device)
-            return self.model(input_ids=tokenized['input_ids'], attention_mask=tokenized['attention_mask']).logits
+            output = self.model(input_ids=tokenized['input_ids'], attention_mask=tokenized['attention_mask']).logits
         elif isinstance(input, str):
-            return self.model(self.tokenizer.encode(input, return_tensors='pt')).logits.detach().numpy().tolist()[0]
+            output = self.model(self.tokenizer.encode(input, return_tensors='pt')).logits.detach().numpy().tolist()[0]
+            return output[1] > output[0] if to_toxic else output
+        else:
+            raise RuntimeError('Unsupported input type')
         
-        return None
-    
-    def __call__(self, input): return self.predict(input)
-
-    def collate_batch(self, batch): return self.tokenizer.pad(batch, return_tensors='pt').to(self.device)
-
-    def to(self, device):
-        self.device = device
-        self.model.to(device)
-        return self
+        return output[:,1] if to_toxic else output

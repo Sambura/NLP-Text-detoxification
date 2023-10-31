@@ -37,7 +37,7 @@ class DetoxifierTrainer():
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained_name)
 
     def load_dataset(self, path='data/raw/filtered.tsv',
-                    cache_path='data/processed/tokenized.tsv',
+                    cache_path='data/interim/tokenized.tsv',
                     val_ratio=0.2,
                     dataset_portion=1):
         if self.tokenizer is None: self.load_pretrained()
@@ -86,7 +86,7 @@ class DetoxifierTrainer():
             tokenizer=self.tokenizer,
         )
 
-    def train(self, trainer=None, model_save_path='models/trained_detoxifier', seed=None, verbose=False):
+    def train(self, model_save_path, trainer=None, seed=None, verbose=False):
         seed_everything(seed)
         if verbose: print('Seed applied')
         if trainer is None: trainer = self.make_trainer(verbose=verbose)
@@ -96,9 +96,12 @@ class DetoxifierTrainer():
         trainer.train()
         trainer.save_model(self.model_save_path)
 
-if __name__ == '__main__':
-    print('Default training procedure...')
+def main(model_save_path='models/trained_detoxifier', dataset_portion=1, seed=1984, verbose=True):
+    if verbose: print('Default training procedure...')
     trainer = DetoxifierTrainer()
-    trainer.load_dataset(dataset_portion=0.1)
-    trainer.train(verbose=True, seed=1984)
-    print(f'Training finished. The model is written to {trainer.model_save_path}')
+    trainer.load_dataset(dataset_portion=dataset_portion)
+    trainer.train(model_save_path, seed=seed, verbose=verbose)
+    if verbose: print(f'Training finished. The model is written to {trainer.model_save_path}')
+
+if __name__ == '__main__':
+    main(dataset_portion=0.1)

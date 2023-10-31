@@ -2,14 +2,7 @@ import pandas as pd
 from pathlib import Path
 import os
 import json
-
-def load_data(path, drop_columns=True, sort_toxicity=True, flatten=False):
-    df = pd.read_csv(path, delimiter='\t', index_col=0)
-    if drop_columns: drop_extra_columns_inplace(df)
-    if sort_toxicity: sort_by_toxicity_inplace(df)
-    
-    if flatten: return flatten_data(df)
-    return df
+from .download_data import download_data
 
 def drop_extra_columns_inplace(df):
     df.drop(columns=["similarity", "lenght_diff"], inplace=True)
@@ -41,12 +34,27 @@ def tokenize_data(df, tokenizer, max_length=128):
 
     return tokenized_df
 
+def download_if_needed(path):
+    if not os.path.exists(path):
+        parent = Path(path).parent.absolute()
+        download_data(data_dest=parent)
+
+def load_data(path, drop_columns=True, sort_toxicity=True, flatten=False):
+    download_if_needed(path)
+    df = pd.read_csv(path, delimiter='\t', index_col=0)
+    if drop_columns: drop_extra_columns_inplace(df)
+    if sort_toxicity: sort_by_toxicity_inplace(df)
+    
+    if flatten: return flatten_data(df)
+    return df
+
 def load_tokenized_data(path, cache_path, tokenizer, max_length=128, drop_columns=True, sort_toxicity=True, flatten=False):
     if os.path.exists(cache_path):
         df = pd.read_csv(cache_path, delimiter='\t')
         df['reference'] = [json.loads(x) for x in df['reference']]
         df['translation'] = [json.loads(x) for x in df['translation']]
     else:
+        download_if_needed(path)
         df = pd.read_csv(path, delimiter='\t', index_col=0)
         df = tokenize_data(df, tokenizer, max_length)
         cache_path_parent = Path(cache_path).parent.absolute()
@@ -56,5 +64,5 @@ def load_tokenized_data(path, cache_path, tokenizer, max_length=128, drop_column
     if drop_columns: drop_extra_columns_inplace(df)
     if sort_toxicity: sort_by_toxicity_inplace(df)
     
-    if not flatten: return df
-    return flatten_data(df)
+    if flatten: return flatten_data(df)
+    return df
