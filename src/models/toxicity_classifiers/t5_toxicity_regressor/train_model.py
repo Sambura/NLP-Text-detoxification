@@ -55,9 +55,10 @@ def main(output_path='models/t5-toxicity-regressor/', portion=1, verbose=True):
         learning_rate=2e-4,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
-        weight_decay=0.01,
+        weight_decay=0.03,
         save_total_limit=10,
         num_train_epochs=10,
+        log_steps=3000,
         save_steps=5000,
         fp16=True,
         report_to='tensorboard',
@@ -77,4 +78,4 @@ def main(output_path='models/t5-toxicity-regressor/', portion=1, verbose=True):
     torch.save(model.state_dict(), os.path.join(output_path, 'model.pt'))
 
 if __name__ == '__main__':
-    main(portion=0.01)
+    main()

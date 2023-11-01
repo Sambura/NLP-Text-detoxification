@@ -38,7 +38,7 @@ class DetoxifierPredictor():
     def collate_func(self, batch):
         return self.tokenizer.pad(batch, return_tensors='pt').to(self.device)
 
-    def get_eval_dataset(self, path='data/raw/filtered.tsv', cache_path='data/interim/tokenized.tsv', dataset_portion=1):
+    def get_eval_dataset(self, path, cache_path, dataset_portion=1):
         return load_toxicity_dataset(path, cache_path, self.tokenizer, portion=dataset_portion)
 
     def get_dataloader(self, dataset, batch_size=128):
@@ -63,24 +63,52 @@ class DetoxifierPredictor():
 
         return texts
     
-    def export_ref_trn_dataframe(self, decoded_refs, decoded_trns, export_path='data/predicted/predictions.tsv'):
+    def export_ref_trn_dataframe(self, decoded_refs, decoded_trns, export_path):
         df = pd.DataFrame(np.array([decoded_refs, decoded_trns]).T, columns=['Input', 'Detoxified version'])
         export_path_parent = Path(export_path).parent.absolute()
         os.makedirs(export_path_parent, exist_ok=True)
         df.to_csv(export_path, sep='\t', index=False)
     
-def main(model_path='models/t5_detoxifier-10x10lr', dataset_portion=1, verbose=True):
+    
+def main(model_path, dataset_path, tokenized_path, export_path, dataset_portion, translate_str=None, verbose=True):
     if verbose: print('Loading model...')
     predictor = DetoxifierPredictor(model_path)
+
+    if translate_str is not None:
+        print(f'Translation for `{translate_str}`:')
+        print(predictor.translate_text(translate_str))
+        return
+
     if verbose: print('Loading data...')
-    dataset = predictor.get_eval_dataset(dataset_portion=dataset_portion)
+    dataset = predictor.get_eval_dataset(dataset_path, tokenized_path, dataset_portion=dataset_portion)
     dataloader = predictor.get_dataloader(dataset)
     translations = predictor.predict(dataloader)
     decoded_translations = predictor.decode(translations)
     decoded_inputs = predictor.decode(dataset)
     if verbose: print('Exporting...')
-    predictor.export_ref_trn_dataframe(decoded_inputs, decoded_translations)
+    predictor.export_ref_trn_dataframe(decoded_inputs, decoded_translations, export_path)
+    if verbose: print(f'Exported predictions to: {export_path}')
 
 if __name__ == '__main__':
-    main()
-    
+    import argparse
+    parser = argparse.ArgumentParser("predict_model")
+    parser.add_argument('-m', '--model_path', default='models/t5_detoxifier-10', type=str)
+    parser.add_argument('-t', '--translate', dest='prompt', default=None, type=str)
+    parser.add_argument('-d', '--dataset_path', default=None, type=str)
+    parser.add_argument('--tokenized_path', default=None, type=str)
+    parser.add_argument('-o', '--export_path', default='data/predicted/predictions.tsv', type=str)
+    parser.add_argument('-p', '--portion', help='Portion of dataset to run prediction on (rows will be randomly selected)', default=1, type=float)
+
+    args = parser.parse_args()
+    if args.dataset_path is None: 
+        args.dataset_path = 'data/raw/filtered.tsv'
+        if args.tokenized_path is None: args.tokenized_path = 'data/interim/tokenized.tsv'
+
+    main(
+        args.model_path, 
+        args.dataset_path, 
+        args.tokenized_path, 
+        args.export_path,
+        args.portion,
+        args.prompt
+    )

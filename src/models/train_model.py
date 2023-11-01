@@ -94,4 +94,4 @@ def main(model_save_path='models/trained_detoxifier', dataset_portion=1, seed=19
     if verbose: print(f'Training finished. The model is written to {trainer.model_save_path}')
 
 if __name__ == '__main__':
-    main(dataset_portion=0.1)
+    main(dataset_portion=1)

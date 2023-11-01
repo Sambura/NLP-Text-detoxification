@@ -50,7 +50,7 @@ def load_data(path, drop_columns=True, sort_toxicity=True, flatten=False):
     return df
 
 def load_tokenized_data(path, cache_path, tokenizer, max_length=128, drop_columns=True, sort_toxicity=True, flatten=False, verbose=False):
-    if os.path.exists(cache_path):
+    if cache_path is not None and os.path.exists(cache_path):
         if verbose: print('Loading tokenized data...')
         df = pd.read_csv(cache_path, delimiter='\t')
         df['reference'] = [json.loads(x) for x in df['reference']]
@@ -60,10 +60,11 @@ def load_tokenized_data(path, cache_path, tokenizer, max_length=128, drop_column
         df = pd.read_csv(path, delimiter='\t', index_col=0)
         if verbose: print('Tokenizing...')
         df = tokenize_data(df, tokenizer, max_length)
-        if verbose: print('Backing up...')
-        cache_path_parent = Path(cache_path).parent.absolute()
-        os.makedirs(cache_path_parent, exist_ok=True)
-        df.to_csv(cache_path, sep='\t', index=False)
+        if cache_path is not None:
+            if verbose: print('Backing up...')
+            cache_path_parent = Path(cache_path).parent.absolute()
+            os.makedirs(cache_path_parent, exist_ok=True)
+            df.to_csv(cache_path, sep='\t', index=False)
 
     if drop_columns: drop_extra_columns_inplace(df)
     if sort_toxicity: sort_by_toxicity_inplace(df)
