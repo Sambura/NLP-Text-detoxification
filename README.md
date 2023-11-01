@@ -46,5 +46,4 @@ python ./src/models/predict_model.py -t 'Hello there general Kenobi'
 ```
 For more info you can use `--help` command line argument.
 
----
-Most of the files in `src/` don't provide command line interface, so if you want to customize the process of training/prediction etc., you can import these files in your own script, and adjust the process to your liking
+You can also use `src/models/evaluate_model.py` to evaluate model's predictions, and `src\models\toxicity_classifiers\t5_toxicity_regressor\train_model.py` to train the toxicity regressor. Both of these scripts have a minimal command line interface, which you can query by using `--help` argument.

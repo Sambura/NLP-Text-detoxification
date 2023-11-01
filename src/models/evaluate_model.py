@@ -29,14 +29,14 @@ class DetoxifierEvaluator():
 def get_random_rows(df, portion=1):
     return df[:][np.random.rand(len(df.index)) <= portion]
 
-def main(use_roberta=False, weights_path='models/t5-toxicity-regressor/model.pt', predictions_path='data/predicted/predictions.tsv', data_portion=1, verbose=True):
+def main(predictions_path, use_roberta=False, weights_path='models/t5-toxicity-regressor/model.pt', portion=1, verbose=True):
     if verbose: print('Loading model...')
     model = RTCModel() if use_roberta else T5TEModel(weights_path)
     evaluator = DetoxifierEvaluator(model)
 
     if verbose: print('Loading data...')
     df = pd.read_csv(predictions_path, sep='\t')
-    df = get_random_rows(df, data_portion)
+    df = get_random_rows(df, portion)
     batch_size = 32 if use_roberta else 128
     ref_evals = evaluator.evaluate(df['Input'].astype(str).tolist(), batch_size)
     gc.collect()
@@ -51,4 +51,10 @@ def main(use_roberta=False, weights_path='models/t5-toxicity-regressor/model.pt'
     print(f'{100 * (1 - ttt / ttr) : 0.2f}% samples detoxified succesfully')
 
 if __name__ == "__main__":
-   main(data_portion=1)
+    import argparse
+    parser = argparse.ArgumentParser("evaluate_model")
+    parser.add_argument('-p', '--portion', default=1, type=float)
+    parser.add_argument('--use_roberta', action='store_true')
+    parser.add_argument('-d', '--predictions_path', default='data/predicted/predictions.tsv', type=str)
+    args = parser.parse_args()
+    main(args.predictions_path, use_roberta=args.use_roberta, portion=args.portion)

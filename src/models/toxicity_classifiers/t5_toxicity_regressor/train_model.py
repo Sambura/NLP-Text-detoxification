@@ -36,8 +36,8 @@ def main(output_path='models/t5-toxicity-regressor/', portion=1, verbose=True):
 
     if verbose: print('Loading data...')
     dataset = load_toxicity_dataset(
-        path='../data/raw/filtered.tsv',
-        cache_path='../data/interim/tokenized.tsv',
+        path='data/raw/filtered.tsv',
+        cache_path='data/interim/tokenized.tsv',
         tokenizer=tokenizer,
         include_translations=True,
         portion=portion
@@ -58,7 +58,7 @@ def main(output_path='models/t5-toxicity-regressor/', portion=1, verbose=True):
         weight_decay=0.03,
         save_total_limit=10,
         num_train_epochs=10,
-        log_steps=3000,
+        logging_steps=3000,
         save_steps=5000,
         fp16=True,
         report_to='tensorboard',
@@ -78,4 +78,8 @@ def main(output_path='models/t5-toxicity-regressor/', portion=1, verbose=True):
     torch.save(model.state_dict(), os.path.join(output_path, 'model.pt'))
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser("evaluate_model")
+    parser.add_argument('-p', '--portion', default=1, type=float)
+    args = parser.parse_args()
+    main(portion=args.portion)

@@ -35,20 +35,30 @@ def tokenize_data(df, tokenizer, max_length=128):
 
     return tokenized_df
 
-def download_if_needed(path, verbose=False):
+def download_if_needed(path, verbose=False, num_tries=3):
     if not os.path.exists(path):
-        if verbose: print('Downloading raw data...')
-        parent = Path(path).parent.absolute()
-        download_data(data_dest=parent)
+        for _ in range(num_tries):
+            try:
+                if verbose: print('Downloading raw data...')
+                parent = Path(path).parent.absolute()
+                download_data(data_dest=parent)
+                break
+            except Exception as e:
+                print(e)
 
-def load_data(path, drop_columns=True, sort_toxicity=True, flatten=False):
-    download_if_needed(path)
-    df = pd.read_csv(path, delimiter='\t', index_col=0)
+def preprocess_dataframe(df, drop_columns=True, sort_toxicity=True, flatten=False):
     if drop_columns: drop_extra_columns_inplace(df)
     if sort_toxicity: sort_by_toxicity_inplace(df)
-    
-    if flatten: return flatten_data(df)
+    if flatten: df = flatten_data(df)
+
     return df
+
+def load_data(path, drop_columns=True, sort_toxicity=True, flatten=False):
+    
+    download_if_needed(path)
+    df = pd.read_csv(path, delimiter='\t', index_col=0)
+
+    return preprocess_dataframe(df, drop_columns, sort_toxicity, flatten)
 
 def df_str_to_list_inplace(df, columns=['reference', 'translation']):
     for col_name in columns:
@@ -86,7 +96,13 @@ def split_data(df, cache_path, val_split):
     return train_df, val_df
 
 def load_tokenized_data(path, cache_path, tokenizer, max_length=128, drop_columns=True, sort_toxicity=True, flatten=False, verbose=False, val_split=None):
-    tokenized_path = None if cache_path is None else os.path.join(cache_path, 'tokenized.tsv')
+    tokenized_path = cache_path
+    if tokenized_path is not None:
+        if os.path.isfile(tokenized_path):
+            cache_path = Path(tokenized_path).parent.absolute()
+        else:
+            tokenized_path = os.path.join(cache_path, 'tokenized.tsv')
+
     if tokenized_path is not None and os.path.exists(tokenized_path):
         if verbose: print('Loading tokenized data...')
         df = pd.read_csv(tokenized_path, delimiter='\t')
@@ -101,11 +117,13 @@ def load_tokenized_data(path, cache_path, tokenizer, max_length=128, drop_column
             os.makedirs(cache_path, exist_ok=True)
             df.to_csv(tokenized_path, sep='\t', index=False)
 
-    if drop_columns: drop_extra_columns_inplace(df)
-    if sort_toxicity: sort_by_toxicity_inplace(df)
-    if flatten: df = flatten_data(df)
+    if val_split:
+        tdf, vdf = split_data(df, cache_path, val_split)
 
-    if val_split is None:
-        return df
+        return ( # copy needed to avoid pandas' warnings
+            preprocess_dataframe(tdf.copy(), drop_columns, sort_toxicity, flatten), 
+            preprocess_dataframe(vdf.copy(), drop_columns, sort_toxicity, flatten)
+        )
+
+    return preprocess_dataframe(df, drop_columns, sort_toxicity, flatten)
     
-    return split_data(df, cache_path, val_split)
