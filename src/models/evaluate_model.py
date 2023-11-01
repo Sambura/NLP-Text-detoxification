@@ -29,7 +29,7 @@ class DetoxifierEvaluator():
 def get_random_rows(df, portion=1):
     return df[:][np.random.rand(len(df.index)) <= portion]
 
-def main(use_roberta=False, weights_path='models/last_toxic_regressor/model.pt', predictions_path='data/predicted/predictions.tsv', data_portion=1, verbose=True):
+def main(use_roberta=False, weights_path='models/t5-toxicity-regressor/model.pt', predictions_path='data/predicted/predictions.tsv', data_portion=1, verbose=True):
     if verbose: print('Loading model...')
     model = RTCModel() if use_roberta else T5TEModel(weights_path)
     evaluator = DetoxifierEvaluator(model)

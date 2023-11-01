@@ -15,7 +15,7 @@ except ImportError:
 
 
 class DetoxifierPredictor():
-    def __init__(self, path='models/trained_detoxifier', model=None, tokenizer=None):
+    def __init__(self, path, model=None, tokenizer=None):
         self.model_path = path
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_path) if tokenizer is None else tokenizer
@@ -92,7 +92,7 @@ def main(model_path, dataset_path, tokenized_path, export_path, dataset_portion,
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser("predict_model")
-    parser.add_argument('-m', '--model_path', default='models/t5_detoxifier-10', type=str)
+    parser.add_argument('-m', '--model_path', default='models/t5-detoxifier', type=str)
     parser.add_argument('-t', '--translate', dest='prompt', default=None, type=str)
     parser.add_argument('-d', '--dataset_path', default=None, type=str)
     parser.add_argument('--tokenized_path', default=None, type=str)

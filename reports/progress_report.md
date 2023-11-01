@@ -35,3 +35,9 @@ Later I found out about existing toxicity classifier model made by the authors o
 I ended up training my own regressor anyway, after which I compared performance of both my regressor and RoBERTa-based classifier. In general models seemed to have rather similar performance: there was about 15% discrepancy between the dataset labels and models' predictions, which is arguably expected given the quality of the data and knowing that the term `toxicity` is vague, which further adds subjectiveness of given toxicity estimations. Inspection of examples of sentences, classified as toxic vs. netural by both models shown that both models do a decent job at detecting toxicity. However, my regressor seemed to be give results more similar to the ones presented in the dataset. Notably, this does not mean that my model is a superior toxicity classifier, but rather in is better at detecting toxic text which is generally considered toxic in terms of this specific dataset.
 
 Finally I decided to use my regressor to evaluate model's performance, but I believe that the results would be quite similar were I to use the RoBERTa based model instead.
+
+## Results
+
+My final solution is a fine-tuned T5 small model, since its performance turned out to be pretty decent, although far from perfect. 
+
+As for evalutaion models, I decided to use both T5 regressor and RoBERTa classifier and compare their results. More evaluations - more info

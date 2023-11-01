@@ -1,7 +1,6 @@
 from torch.utils.data import random_split
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from transformers import GenerationConfig, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer
-import os
 
 try:
     from ..data.make_dataset import load_detoxification_dataset
@@ -20,7 +19,7 @@ class DetoxifierTrainer():
         self.tokenizer = None
         self.train_dataset = None
         self.val_dataset = None
-        self.history_path = 'models/detoxifier_history'
+        self.history_path = 'models/t5-detoxifier-history'
 
     def load_pretrained(self, pretrained_name='t5-small'):
         self.pretrained_name = pretrained_name
@@ -28,17 +27,20 @@ class DetoxifierTrainer():
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained_name)
 
     def load_dataset(self, path='data/raw/filtered.tsv',
-                    cache_path='data/interim/tokenized.tsv',
+                    cache_path='data/interim/',
                     val_ratio=0.2,
                     dataset_portion=1,
                     verbose=False):
         if self.tokenizer is None: self.load_pretrained()
-        dataset = load_detoxification_dataset(path, cache_path, self.tokenizer, dataset_portion, verbose)
-        self.train_dataset, self.val_dataset = random_split(dataset, [1 - val_ratio, val_ratio])
-
-    def export_training_split(self, export_path):
-        self.train_dataset.to_csv(os.path.join(export_path, 'train.tsv'), sep='\t')
-        self.val_dataset.to_csv(os.path.join(export_path, 'validation.tsv'), sep='\t')
+        self.train_dataset, self.val_dataset = \
+            load_detoxification_dataset(
+                path, 
+                cache_path, 
+                self.tokenizer, 
+                val_split=val_ratio, 
+                portion=dataset_portion, 
+                verbose=verbose
+            )
 
     def get_default_generation_config(self):
         genConfig = GenerationConfig.from_pretrained(self.pretrained_name)
@@ -82,7 +84,7 @@ class DetoxifierTrainer():
             tokenizer=self.tokenizer,
         )
 
-    def train(self, model_save_path, trainer=None, seed=None, verbose=False):
+    def train(self, model_save_path, trainer=None, verbose=False):
         if verbose: print('Seed applied')
         if trainer is None: trainer = self.make_trainer(verbose=verbose)
         if verbose: print('Trainer created')
@@ -91,15 +93,18 @@ class DetoxifierTrainer():
         trainer.train()
         trainer.save_model(self.model_save_path)
 
-def main(model_save_path='models/trained_detoxifier', dataset_portion=1, seed=1984, verbose=True):
+def main(model_save_path='models/t5-detoxifier', dataset_portion=1, seed=1984, verbose=True):
     if verbose: print('Default training procedure...')
-    trainer = DetoxifierTrainer(seed=1984)
+    trainer = DetoxifierTrainer(seed=seed)
     trainer.load_dataset(dataset_portion=dataset_portion, verbose=verbose)
-    trainer.train(model_save_path, seed=seed, verbose=verbose)
+
+    seed_everything(seed)
+    trainer.train(model_save_path, verbose=verbose)
     if verbose: print(f'Training finished. The model is written to {trainer.model_save_path}')
-    # data_export_path = 'data/interim/'
-    # trainer.export_training_split(data_export_path)
-    # if verbose: print(f'The training split is written to {data_export_path}')
 
 if __name__ == '__main__':
-    main(dataset_portion=1)
+    import argparse
+    parser = argparse.ArgumentParser("train_model")
+    parser.add_argument('-p', '--portion', default=1, type=float)
+    args = parser.parse_args()
+    main(dataset_portion=args.portion)
