@@ -28,12 +28,12 @@ Follow this [link](https://colab.research.google.com/github/Sambura/NLP-Text-det
 
 ### Manually
 Clone git repo:
-```
+```bash
 git clone https://github.com/Sambura/NLP-Text-detoxification.git
 cd NLP-Text-detoxification
 ```
 Install all the packages from `requirements.txt`, according to the python distribution you are using. For example it can be done with:
-```
+```bash
 pip install -r /path/to/requirements.txt
 ```
 
@@ -41,7 +41,7 @@ Now, the easiest way to train the model is to run `src/models/train_model.py`, w
 
 For predictions use `src/models/predict_model.py`. Running without arguments this will attempt to load the model from `models/t5_detoxifier-10/` and run prediction on the whole dataset (`reference` column). To translate a single line of text you can use command line argument like so:
 
-```
+```bash
 python ./src/models/predict_model.py -t 'Hello there general Kenobi'
 ```
 For more info you can use `--help` command line argument.
