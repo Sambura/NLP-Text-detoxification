@@ -1,21 +1,37 @@
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, GenerationConfig
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, GenerationConfig, PreTrainedModel, PreTrainedTokenizerBase
 from tqdm.auto import tqdm
 import torch
 import pandas as pd
 import numpy as np
 import os
 from pathlib import Path
+import typing
 
-try:
+try: # there is probably a proper way to do it but presumably this info is kept secret
     from ..data.make_dataset import load_toxicity_dataset
 except ImportError:
     import sys
     sys.path.append('.')
     from src.data.make_dataset import load_toxicity_dataset
 
-
 class DetoxifierPredictor():
-    def __init__(self, path, model=None, tokenizer=None):
+    """
+    Class for using the T5 detoxifier to detoxify text!
+
+    Attributes:
+    model (PreTrainedModel): The actual model
+    tokenizer: The tokenizer
+    device: The pytorch device
+    """
+    def __init__(self, path: str, model: PreTrainedModel=None, tokenizer: PreTrainedTokenizerBase=None) -> None:
+        """
+        Initialize this predictor with the pretrained model
+
+        Parameters:
+        path (str): Path to the model to load
+        model (PreTrainedModel, optional): The model, in case you already have it loaded
+        tokenizer (PreTrainedTokenizer, optional): The tokenizer, in case you already have it loaded
+        """
         self.model_path = path
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_path) if tokenizer is None else tokenizer
@@ -24,12 +40,20 @@ class DetoxifierPredictor():
         self.model.config.use_cache = False
         self.model.to(self.device)
 
-    def get_generation_config(self, max_new_tokens=128):
+    def get_generation_config(self, max_new_tokens: int=128) -> GenerationConfig:
+        """
+        Get default text generation configuration for this model
+
+        Parameters:
+        max_new_tokens (int): Modify the max number of generated tokens
+        """
+        # I didn't figure out how to clone this config, so I have to use model_path
         genConfig = GenerationConfig.from_pretrained(self.model_path)
         genConfig.max_new_tokens = max_new_tokens
         return genConfig
         
-    def translate_text(self, inference_request):
+    def translate_text(self, inference_request: str) -> str:
+        """Transform the given text by the detoxification model"""
         tokenized = self.tokenizer.encode(inference_request, return_tensors="pt").to(self.device)
         gen_config = self.get_generation_config(256)
         outputs = self.model.generate(tokenized, generation_config=gen_config)
@@ -38,13 +62,27 @@ class DetoxifierPredictor():
     def collate_func(self, batch):
         return self.tokenizer.pad(batch, return_tensors='pt').to(self.device)
 
-    def get_eval_dataset(self, path, cache_path, dataset_portion=1):
+    def get_eval_dataset(self, path: str, cache_path: str, dataset_portion: float=1) -> list:
+        """
+        Loads the dataset for running prediction on.
+
+        Parameters:
+        Refer to load_toxicity_dataset() function
+        """
         return load_toxicity_dataset(path, cache_path, self.tokenizer, portion=dataset_portion)
 
-    def get_dataloader(self, dataset, batch_size=128):
+    def get_dataloader(self, dataset: list, batch_size: int=128) -> torch.utils.data.DataLoader:
+        """Create a dataloader for the given dataset"""
         return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=self.collate_func)
 
-    def predict(self, dataloader=None):
+    def predict(self, dataloader: torch.utils.data.DataLoader) -> list[dict[str, list[int]]]:
+        """
+        Run prediction on the data in the given dataloader
+
+        Returns:
+        The list of predictions. 
+        Each prediction is a dict with a single element: { 'input_ids': predicted_tokens }
+        """
         transformed = []
         gen_config = self.get_generation_config()
 
@@ -55,7 +93,17 @@ class DetoxifierPredictor():
         transformed = [{'input_ids': x} for x in transformed]
         return transformed
     
-    def decode(self, transformed):
+    def decode(self, transformed: list[dict[str, list[int]]]) -> list[str]:
+        """
+        Decode the list of tokenized texts, i.e. ones returned by DetoxifierPredictor.predict()
+
+        Parameters:
+        transformed (list): list of data to decode. Each element should contain a key 'input_ids'
+            with value being a list of token ids
+
+        Returns:
+        list of decoded texts
+        """
         texts = []
 
         for sample in tqdm(transformed, desc='Decoding'):
@@ -63,14 +111,43 @@ class DetoxifierPredictor():
 
         return texts
     
-    def export_ref_trn_dataframe(self, decoded_refs, decoded_trns, export_path):
+    def export_ref_trn_dataframe(self, decoded_refs: list[str], decoded_trns: list[str], export_path: str) -> None:
+        """
+        Export predictions to a .tsv file along with the input data.
+
+        Parameters:
+        decoded_refs (list[str]): list of inputs to the model in a text form
+        decoded_trns (list[str]): list of outputs from the model in a text form
+        export_path (str): path where the file should be exported
+        """
         df = pd.DataFrame(np.array([decoded_refs, decoded_trns]).T, columns=['Input', 'Detoxified version'])
         export_path_parent = Path(export_path).parent.absolute()
         os.makedirs(export_path_parent, exist_ok=True)
         df.to_csv(export_path, sep='\t', index=False)
     
     
-def main(model_path, dataset_path, tokenized_path, export_path, dataset_portion, translate_str=None, verbose=True):
+def main(model_path: str, 
+         dataset_path: str, 
+         tokenized_path: str, 
+         export_path: str, 
+         dataset_portion: float=1, 
+         translate_str: typing.Optional[str]=None, 
+         verbose: bool=True) -> None:
+    """
+    This function does a prediction on a given dataset using the T5 detoxifier model
+
+    Parameters:
+    model_path (str): Path to the saved T5 detoxifier model
+    dataset_path (str): The path to the raw dataset
+    tokenized_path (str): The path to the tokenized dataset. If the file exists, this
+        parameter overrides `dataset_path`
+    export_path (str): Filename for model's predictions (.tsv format)
+    dataset_portion (float): The fraction of the dataset to run predictions on
+    translate_str (str): If not None, makes this function transform this string using the
+        model, print it, and return from function. In this case only all parameters except
+        `model_path` are optional (can be set to None)
+    verbose (bool): If True, progress report messages are printed
+    """
     if verbose: print('Loading model...')
     predictor = DetoxifierPredictor(model_path)
 

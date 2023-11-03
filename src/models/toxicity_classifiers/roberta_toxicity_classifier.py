@@ -1,9 +1,11 @@
 from transformers import RobertaTokenizer, RobertaForSequenceClassification
 from transformers.tokenization_utils_base import BatchEncoding
-import torch
 from .toxicity_classifier import ToxicityClassifier
 
 class RTCModel(ToxicityClassifier):
+    """
+    Interface for predicting with RoBERTa based toxicity classifier
+    """
     def __init__(self):
         self.model = RobertaForSequenceClassification.from_pretrained('SkolkovoInstitute/roberta_toxicity_classifier')
         self.tokenizer = RobertaTokenizer.from_pretrained('SkolkovoInstitute/roberta_toxicity_classifier')

@@ -5,9 +5,15 @@ import os
 def download_data(
         data_url:str="https://github.com/skoltech-nlp/detox/releases/download/emnlp2021/filtered_paranmt.zip", 
         data_dest:str="./data/",
-        zip_name:str="compressed.zip"):
+        zip_name:str="compressed.zip") -> None:
     """
-        Download dataset from the specified url and extract it in the given directory
+    Download dataset from the specified url and extract it in the given directory
+
+    Parameters:
+    data_url (str): Url to the zip archive to download
+    data_dest (str): Path to directory where to put the downloaded file and where the files will be extracted.
+        If the directory doesn't exist, it will be automatically created
+    zip_name (str): How the downloaded archive should be named
     """
     zip_destination = os.path.join(data_dest, zip_name)
 
