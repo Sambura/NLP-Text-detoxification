@@ -12,13 +12,14 @@ try:
     from .toxicity_classifiers.toxicity_classifier import ToxicityClassifier
     from .toxicity_classifiers.t5_toxicity_evaluator import T5TEModel
     from .toxicity_classifiers.roberta_toxicity_classifier import RTCModel
+    from ..utils.export_utils import export_dataframe
 except ImportError:
     import sys
     if '.' not in sys.path: sys.path.append('.')
     from src.models.toxicity_classifiers.toxicity_classifier import ToxicityClassifier
     from src.models.toxicity_classifiers.t5_toxicity_evaluator import T5TEModel
     from src.models.toxicity_classifiers.roberta_toxicity_classifier import RTCModel
-
+    from src.utils.export_utils import export_dataframe
 
 class DetoxifierEvaluator():
     "Class for evaluating detoxifier model predictions"
@@ -61,14 +62,19 @@ class DetoxifierEvaluator():
 
         return self.ref_evals, self.trn_evals
     
-    def export_evaluations(self, export_path: str, verbose: bool=False):
-        df = pd.DataFrame(
-            np.array([df['reference'], df['translation'], np.array(self.ref_evals, dtype=bool), np.array(self.trn_evals, dtype=bool)]).T, 
+    def get_evaluated_dataframe(self):
+        return pd.DataFrame(
+            np.array([
+                self.dataframe['reference'], 
+                self.dataframe['translation'], 
+                np.array(self.ref_evals, dtype=bool), 
+                np.array(self.trn_evals, dtype=bool)
+            ]).T, 
             columns=['reference', 'translation', 'ref_tox', 'trn_tox']
         )
-        export_path_parent = Path(export_path).parent.absolute()
-        os.makedirs(export_path_parent, exist_ok=True)
-        df.to_csv(export_path, sep='\t', index=False)
+
+    def export_evaluations(self, export_path: str, verbose: bool=False):
+        export_dataframe(self.get_evaluated_dataframe(), export_path)
         if verbose: print(f'Exported evalutaions to `{export_path}`')
 
     def set_dataframe(self, df):

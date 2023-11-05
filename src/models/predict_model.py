@@ -9,10 +9,12 @@ import typing
 
 try: # there is probably a proper way to do it but presumably this info is kept secret
     from ..data.make_dataset import load_toxicity_dataset
+    from ..utils.export_utils import export_dataframe
 except ImportError:
     import sys
     sys.path.append('.')
     from src.data.make_dataset import load_toxicity_dataset
+    from src.utils.export_utils import export_dataframe
 
 class DetoxifierPredictor():
     """
@@ -121,10 +123,7 @@ class DetoxifierPredictor():
         export_path (str): path where the file should be exported
         """
         df = pd.DataFrame(np.array([decoded_refs, decoded_trns]).T, columns=['reference', 'translation'])
-        export_path_parent = Path(export_path).parent.absolute()
-        os.makedirs(export_path_parent, exist_ok=True)
-        df.to_csv(export_path, sep='\t', index=False)
-    
+        export_dataframe(df, export_path)
     
 def main(model_path: str, 
          dataset_path: str, 

@@ -107,6 +107,6 @@ def main(predictions_path, export_path, n=40):
 
 if __name__ == '__main__':
     main(
-        predictions_path='data/predicted/predictions.tsv',
+        predictions_path='data/predicted/val-predictions.tsv',
         export_path='reports/figures/'
     )

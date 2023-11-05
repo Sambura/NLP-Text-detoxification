@@ -13,10 +13,24 @@ I intended to use a prompt/prefix added to each toxic sentence before feeding it
 Generation limit does not seem to have a significat effect on training performance, so it was chosen to set it to 64, since over 99.9% of the dataset sentences are 64 tokens or less.
 
 ### Training parameters
-Initial learning rate was increased, however I didn't manage to get better results by changing any other parameters
+I was primarily experementing with learning rate, since every time I changed it the results also changed significantly. For the final model I tried:
+- lr = 5e-5, weight_decay = 0.04
+    - about 58% successfully detoxified samples from validation set
+- lr = 1e-4, weight_decay = 0.01
+    - about 60.5% successfully detoxified samples from validation set
+- lr = 5e-4, weight_decay = 0.01
+    - about 67% successfully detoxified samples from validation set
+- lr = 1e-3, weight_decay = 0.01
+    - about 68.5% successfully detoxified samples from validation set
 
 ### Training process
 According to the paper on text detoxification, there are no standard and efficient metrics for detoxification seq2seq training, therefore a loss calculated by the T5 model was used for training.
+
+### Data
+Initially I was using only simple data preprocessing: sorting references and translations
+to ensure model always gets toxic input and neutral label.
+
+However, the final model was trained on the cleaned version of the dataset. I used my T5-based toxicity regressor (more on it down below) to reevaluate toxicity scores of the given samples. After reevaluation, rows with both samples evaluated as neutral or toxic, as well as rows that were evaluated as neutral -> toxic, were removed from the dataset.
 
 ## Model evalutation
 The initial plan was to train a transformer-based regressor that for evaluating the toxicity of text. The idea was to take an encoder from T5 small model, add a head for regression, and train the resulting model on the same dataset, inputs being reference/translation texts, and the labels are their respective toxicity levels.
@@ -38,6 +52,6 @@ Finally I decided to use my regressor to evaluate model's performance, but I bel
 
 ## Results
 
-My final solution is a fine-tuned T5 small model, since its performance turned out to be pretty decent, although far from perfect. 
+My final solution is a fine-tuned T5 small model, since it's the only one I tried (since it had arguably decent performance). As for my training arguments, my best results were by using $\text{learning\_rate} = 0.001, \text{weight\_decay} = 0.01$. I got better results when training on the cleaned version of the dataset, however whether cleaning the dataset how I did is valid is not entirely clear for me.
 
 As for evalutaion models, I decided to use both T5 regressor and RoBERTa classifier and compare their results. More evaluations - more info
