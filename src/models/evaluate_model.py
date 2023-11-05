@@ -31,7 +31,7 @@ class DetoxifierEvaluator():
     def collate_fn(self, texts):
         return self.model.tokenizer(texts, return_tensors='pt', padding=True).to(self.device)
 
-    def evaluate(self, texts: list[str], batch_size: int=128) -> list[bool]:
+    def evaluate_list(self, texts: list[str], batch_size: int=128) -> list[bool]:
         """
         Evaluates the toxicity of the given texts.
 
@@ -51,6 +51,28 @@ class DetoxifierEvaluator():
             evals += output.detach().cpu()
 
         return evals
+    
+    def evaluate(self, batch_size: int):
+        self.ref_evals = self.evaluate_list(self.dataframe['reference'].astype(str).tolist(), batch_size)
+        # this can be removed, but then probably use batch_size = 4 for roberta or something
+        gc.collect()
+        torch.cuda.empty_cache()
+        self.trn_evals = self.evaluate_list(self.dataframe['translation'].astype(str).tolist(), batch_size)
+
+        return self.ref_evals, self.trn_evals
+    
+    def export_evaluations(self, export_path: str, verbose: bool=False):
+        df = pd.DataFrame(
+            np.array([df['reference'], df['translation'], np.array(self.ref_evals, dtype=bool), np.array(self.trn_evals, dtype=bool)]).T, 
+            columns=['reference', 'translation', 'ref_tox', 'trn_tox']
+        )
+        export_path_parent = Path(export_path).parent.absolute()
+        os.makedirs(export_path_parent, exist_ok=True)
+        df.to_csv(export_path, sep='\t', index=False)
+        if verbose: print(f'Exported evalutaions to `{export_path}`')
+
+    def set_dataframe(self, df):
+        self.dataframe = df
 
 def get_random_rows(df: pd.DataFrame, portion: float=1) -> pd.DataFrame:
     # pretty sure there's a function for that...
@@ -80,15 +102,11 @@ def main(predictions_path: str,
     evaluator = DetoxifierEvaluator(model)
 
     if verbose: print('Loading data...')
-    df = pd.read_csv(predictions_path, sep='\t')
-    df = get_random_rows(df, portion)
+    df = get_random_rows(pd.read_csv(predictions_path, sep='\t'), portion)
+    evaluator.set_dataframe(df)
     # roberta seems to be MUCH heavier, so can't afford large batch size
     if batch_size is None: batch_size = 32 if use_roberta else 128
-    ref_evals = evaluator.evaluate(df['reference'].astype(str).tolist(), batch_size)
-    # this can be removed, but then probably use batch_size = 4 for roberta or something
-    gc.collect()
-    torch.cuda.empty_cache()
-    trn_evals = evaluator.evaluate(df['translation'].astype(str).tolist(), batch_size)
+    ref_evals, trn_evals = evaluator.evaluate(batch_size)
 
     ttr = np.sum(ref_evals) # number of toxic samples in inputs
     ttt = np.sum(trn_evals) # number of toxic samples in outputs
@@ -97,15 +115,8 @@ def main(predictions_path: str,
     print(f'Total toxic translations: {ttt}')
     print(f'{100 * (1 - ttt / ttr) :0.2f}% samples detoxified succesfully')
 
-    if export_path is not None:
-        df = pd.DataFrame(
-            np.array([df['reference'], df['translation'], np.array(ref_evals, dtype=bool), np.array(trn_evals, dtype=bool)]).T, 
-            columns=['reference', 'translation', 'ref_tox', 'trn_tox']
-        )
-        export_path_parent = Path(export_path).parent.absolute()
-        os.makedirs(export_path_parent, exist_ok=True)
-        df.to_csv(export_path, sep='\t', index=False)
-        print(f'Exported evalutaions to `{export_path}`')
+    if export_path is not None: 
+        evaluator.export_evaluations(export_path, verbose)
 
 if __name__ == "__main__":
     import argparse

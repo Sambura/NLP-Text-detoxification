@@ -163,7 +163,7 @@ class DetoxifierTrainer():
         trainer.train()
         trainer.save_model(self.model_save_path)
 
-def main(model_save_path: str='models/t5-detoxifier', dataset_portion: float=1, seed: int=1984, verbose: bool=True) -> None:
+def main(model_save_path: str, data_path: str=None, dataset_portion: float=1, seed: int=1984, verbose: bool=True) -> None:
     """
     Starts the standard model training procedure
 
@@ -175,7 +175,10 @@ def main(model_save_path: str='models/t5-detoxifier', dataset_portion: float=1, 
     """
     if verbose: print('Default training procedure...')
     trainer = DetoxifierTrainer(seed=seed)
-    trainer.load_dataset(dataset_portion=dataset_portion, verbose=verbose)
+    if data_path is None:
+        trainer.load_dataset(dataset_portion=dataset_portion, verbose=verbose)
+    else: # cache dire????
+        trainer.load_dataset(data_path, dataset_portion=dataset_portion, verbose=verbose)
 
     seed_everything(seed)
     trainer.train(model_save_path, verbose=verbose)
@@ -185,5 +188,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser("train_model")
     parser.add_argument('-p', '--portion', default=1, type=float)
+    parser.add_argument('-m', '--model_save_path', default='models/t5-detoxifier', type=str)
+    parser.add_argument('-d', '--data_path', default=None, type=str)
     args = parser.parse_args()
-    main(dataset_portion=args.portion)
+    main(args.model_save_path, args.data_path, dataset_portion=args.portion)

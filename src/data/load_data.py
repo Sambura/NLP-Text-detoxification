@@ -12,7 +12,7 @@ def drop_extra_columns_inplace(df: pd.DataFrame) -> None:
     """
     Drops columns `similarity` and `length_diff` from the given dataframe inplace.
     """
-    df.drop(columns=["similarity", "lenght_diff"], inplace=True)
+    df.drop(columns=['similarity', 'lenght_diff'], inplace=True, errors='ignore')
 
 def sort_by_toxicity_inplace(df: pd.DataFrame) -> None:
     """
@@ -124,7 +124,7 @@ def load_data(path: str,
     The preprocessed detoxificatoin DataFrame 
     """
     download_if_needed(path)
-    df = pd.read_csv(path, delimiter='\t', index_col=0)
+    df = pd.read_csv(path, delimiter='\t')
 
     return preprocess_dataframe(df, drop_columns, sort_toxicity, flatten)
 
@@ -229,7 +229,7 @@ def load_tokenized_data(path: str,
         df_str_to_list_inplace(df)
     else:
         download_if_needed(path, verbose)
-        df = pd.read_csv(path, delimiter='\t', index_col=0)
+        df = pd.read_csv(path, delimiter='\t')
         if verbose: print('Tokenizing...')
         df = tokenize_data(df, tokenizer, max_length)
         if tokenized_path is not None:
