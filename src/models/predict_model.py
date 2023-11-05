@@ -120,7 +120,7 @@ class DetoxifierPredictor():
         decoded_trns (list[str]): list of outputs from the model in a text form
         export_path (str): path where the file should be exported
         """
-        df = pd.DataFrame(np.array([decoded_refs, decoded_trns]).T, columns=['Input', 'Detoxified version'])
+        df = pd.DataFrame(np.array([decoded_refs, decoded_trns]).T, columns=['reference', 'translation'])
         export_path_parent = Path(export_path).parent.absolute()
         os.makedirs(export_path_parent, exist_ok=True)
         df.to_csv(export_path, sep='\t', index=False)

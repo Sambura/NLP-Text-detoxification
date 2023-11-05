@@ -24,3 +24,13 @@ def download_data(
 
     with zipfile.ZipFile(zip_destination, 'r') as zip_ref:
         zip_ref.extractall(data_dest)
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser("download_data")
+    parser.add_argument('-u', '--data_url', default="https://github.com/skoltech-nlp/detox/releases/download/emnlp2021/filtered_paranmt.zip", type=str)
+    parser.add_argument('-d', '--dest_path', default="./data/", type=str)
+    parser.add_argument('-z', '--zip_name', default="compressed.zip", type=str)
+    args = parser.parse_args()
+    download_data(data_url=args.data_url, data_dest=args.dest_path, zip_name=args.zip_name)
+    

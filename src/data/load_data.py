@@ -5,6 +5,7 @@ import json
 import numpy as np
 from transformers import PreTrainedTokenizerBase
 import typing
+from urllib.error import URLError
 from .download_data import download_data
 
 def drop_extra_columns_inplace(df: pd.DataFrame) -> None:
@@ -38,7 +39,7 @@ def flatten_data(df: pd.DataFrame) -> pd.DataFrame:
     flat.reset_index(drop=True, inplace=True)
     return flat.rename(columns=rename_dict)
 
-def tokenize_data(df: pd.DataFrame, tokenizer: PreTrainedTokenizerBase, max_length: int=128) -> pd.DataFrame:
+def tokenize_data(df: pd.DataFrame, tokenizer: PreTrainedTokenizerBase, max_length: int=256) -> pd.DataFrame:
     """
     Tokenize the text in the given dataframe. Tokenizes `reference` and `translation` columns. The resulting
     dataframe contains lists of integers (token ids) instead of text
@@ -72,14 +73,14 @@ def download_if_needed(path: str, verbose: bool=False, num_tries: int=3) -> None
     num_tries (int): number of times to try to download the data in case of failure
     """
     if not os.path.exists(path):
-        for _ in range(num_tries):
+        for i in range(num_tries):
             try:
                 if verbose: print('Downloading raw data...')
                 parent = Path(path).parent.absolute()
                 download_data(data_dest=parent)
                 break
-            except Exception as e:
-                print(e)
+            except URLError:
+                if verbose: print(f'Download failed, retry {i + 1}')
 
 def preprocess_dataframe(df: pd.DataFrame, 
                          drop_columns: bool=True, 

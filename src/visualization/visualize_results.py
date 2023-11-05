@@ -31,7 +31,7 @@ def get_tokens(text):
     _only_letters = remove_all_except_letters(_lowered)
     return tokenize_text(_only_letters)
 
-def load_dataframe_and_count_words(path, col1='Input', col2='Detoxified version', remove_contractions=True):
+def load_dataframe_and_count_words(path, col1='reference', col2='translation', remove_contractions=True):
     df = pd.read_csv(path, sep='\t').astype(str)
     input_tokens = Counter()
     detox_tokens = Counter()

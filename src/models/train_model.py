@@ -98,10 +98,10 @@ class DetoxifierTrainer():
         return Seq2SeqTrainingArguments(
             self.history_path,
             evaluation_strategy = "epoch",
-            learning_rate=5e-5,
+            learning_rate=1e-3,
             per_device_train_batch_size=batch_size,
             per_device_eval_batch_size=batch_size,
-            weight_decay=0.04,
+            weight_decay=0.01,
             save_total_limit=5,
             num_train_epochs=epochs,
             predict_with_generate=True,

@@ -1,12 +1,24 @@
 from tqdm.auto import tqdm
-import torch
+from pathlib import Path
 import pandas as pd
 import numpy as np
+import torch
 import gc
+import os
 
-from toxicity_classifiers.toxicity_classifier import ToxicityClassifier
-from toxicity_classifiers.t5_toxicity_evaluator import T5TEModel
-from toxicity_classifiers.roberta_toxicity_classifier import RTCModel
+from typing import Optional
+
+try:
+    from .toxicity_classifiers.toxicity_classifier import ToxicityClassifier
+    from .toxicity_classifiers.t5_toxicity_evaluator import T5TEModel
+    from .toxicity_classifiers.roberta_toxicity_classifier import RTCModel
+except ImportError:
+    import sys
+    if '.' not in sys.path: sys.path.append('.')
+    from src.models.toxicity_classifiers.toxicity_classifier import ToxicityClassifier
+    from src.models.toxicity_classifiers.t5_toxicity_evaluator import T5TEModel
+    from src.models.toxicity_classifiers.roberta_toxicity_classifier import RTCModel
+
 
 class DetoxifierEvaluator():
     "Class for evaluating detoxifier model predictions"
@@ -46,9 +58,11 @@ def get_random_rows(df: pd.DataFrame, portion: float=1) -> pd.DataFrame:
 
 def main(predictions_path: str, 
          use_roberta: bool=False, 
-         weights_path: str='models/t5-toxicity-regressor/model.pt', 
+         weights_path: Optional[str]=None, 
          portion: float=1, 
-         verbose: bool=True) -> None:
+         verbose: bool=True,
+         export_path: Optional[str]=None,
+         batch_size: Optional[int]=None) -> None:
     """
     Runs default evaluation procedure
 
@@ -69,12 +83,12 @@ def main(predictions_path: str,
     df = pd.read_csv(predictions_path, sep='\t')
     df = get_random_rows(df, portion)
     # roberta seems to be MUCH heavier, so can't afford large batch size
-    batch_size = 32 if use_roberta else 128
-    ref_evals = evaluator.evaluate(df['Input'].astype(str).tolist(), batch_size)
+    if batch_size is None: batch_size = 32 if use_roberta else 128
+    ref_evals = evaluator.evaluate(df['reference'].astype(str).tolist(), batch_size)
     # this can be removed, but then probably use batch_size = 4 for roberta or something
     gc.collect()
     torch.cuda.empty_cache()
-    trn_evals = evaluator.evaluate(df['Detoxified version'].astype(str).tolist(), batch_size)
+    trn_evals = evaluator.evaluate(df['translation'].astype(str).tolist(), batch_size)
 
     ttr = np.sum(ref_evals) # number of toxic samples in inputs
     ttt = np.sum(trn_evals) # number of toxic samples in outputs
@@ -83,11 +97,22 @@ def main(predictions_path: str,
     print(f'Total toxic translations: {ttt}')
     print(f'{100 * (1 - ttt / ttr) :0.2f}% samples detoxified succesfully')
 
+    if export_path is not None:
+        df = pd.DataFrame(
+            np.array([df['reference'], df['translation'], np.array(ref_evals, dtype=bool), np.array(trn_evals, dtype=bool)]).T, 
+            columns=['reference', 'translation', 'ref_tox', 'trn_tox']
+        )
+        export_path_parent = Path(export_path).parent.absolute()
+        os.makedirs(export_path_parent, exist_ok=True)
+        df.to_csv(export_path, sep='\t', index=False)
+        print(f'Exported evalutaions to `{export_path}`')
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser("evaluate_model")
     parser.add_argument('-p', '--portion', default=1, type=float)
     parser.add_argument('--use_roberta', action='store_true')
+    parser.add_argument('-w', '--weights_path', default='models/t5-toxicity-regressor/model.pt')
     parser.add_argument('-d', '--predictions_path', default='data/predicted/predictions.tsv', type=str)
     args = parser.parse_args()
-    main(args.predictions_path, use_roberta=args.use_roberta, portion=args.portion)
+    main(args.predictions_path, use_roberta=args.use_roberta, weights_path=args.weights_path, portion=args.portion)
