@@ -1,8 +1,15 @@
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from transformers.tokenization_utils_base import BatchEncoding
 import torch
-from .toxicity_classifier import ToxicityClassifier
-from .t5_toxicity_regressor.regressor import T5ToxicityRegressor
+
+try:
+    from .toxicity_classifier import ToxicityClassifier
+    from .t5_toxicity_regressor.regressor import T5ToxicityRegressor
+except ImportError:
+    import sys
+    if '.' not in sys.path: sys.path.append('.')
+    from src.models.toxicity_classifiers.toxicity_classifier import ToxicityClassifier
+    from src.models.toxicity_classifiers.t5_toxicity_regressor.regressor import T5ToxicityRegressor
 
 class T5TEModel(ToxicityClassifier):
     """

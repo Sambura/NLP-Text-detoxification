@@ -1,6 +1,12 @@
 from transformers import RobertaTokenizer, RobertaForSequenceClassification
 from transformers.tokenization_utils_base import BatchEncoding
-from .toxicity_classifier import ToxicityClassifier
+
+try:
+    from .toxicity_classifier import ToxicityClassifier
+except ImportError:
+    import sys
+    if '.' not in sys.path: sys.path.append('.')
+    from src.models.toxicity_classifiers.toxicity_classifier import ToxicityClassifier
 
 class RTCModel(ToxicityClassifier):
     """
